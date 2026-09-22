@@ -1,6 +1,5 @@
-'"""Merkur.si (EUR, Slovenia's largest DIY/building chain) — batched sitemaps
-/media/sitemap/sitemap-{1..N}-{batch}.xml; product URLs are deep paths ending
-in slug; ld+json Product with EUR price."""
+# Merkur.si scraper for Slovenia (EUR)
+
 import re
 from common import get, sitemap_urls, sane_price, valid_ean, first_str, ldjson_products, offer_from_ld, write_jsonl, pmap
 
