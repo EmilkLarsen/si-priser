@@ -1,7 +1,15 @@
-# Merkur.si scraper for Slovenia (EUR)
+"""Merkur.si (EUR, Slovenia) — batched sitemaps, root-slug product URLs.
 
+media/sitemap/sitemap-1-1.xml .. sitemap-1-2.xml hold ~23k URLs; products are
+root-level slugs like /karton-valoviti-450x350x380-mm-3-1/ (verified
+2026-09-24), categories are short slugs with no digits. Discovery keeps only
+digit-bearing slugs, and handle() drops anything without a real price.
+
+Product pages: itemprop="price" content="9.99" + og:image (verified
+2026-09-24). Currency EUR.
+"""
 import re
-from common import get, sitemap_urls, sane_price, valid_ean, first_str, ldjson_products, offer_from_ld, write_jsonl, pmap
+from common import get, sane_price, write_jsonl, scrape_urls
 
 BASE = "https://www.merkur.si"
 OUT = "data/latest/merkur_si.jsonl"
@@ -9,45 +17,63 @@ OUT = "data/latest/merkur_si.jsonl"
 
 def fetch_url_list(limit=None):
     urls = []
-    for chunk in range(1, 4):
-        for batch in range(1, 6):
-            try:
-                xml = get(f"{BASE}/media/sitemap/sitemap-{chunk}-{batch}.xml")
-            except Exception:
+    rest = []
+    seen = set()
+    for i in range(1, 40):   # sitemap-1-1 .. sitemap-1-39 (404 ends the loop)
+        try:
+            xml = get(f"{BASE}/media/sitemap/sitemap-1-{i}.xml")
+        except Exception:
+            break
+        for u in re.findall(r"<loc>([^<]+)</loc>", xml):
+            u = u.strip()
+            slug = u.rstrip("/").rsplit("/", 1)[-1] if u else ""
+            # products carry digits (dimensions, model, pack counts);
+            # categories ('aparati', 'vrtni-naradi') do not
+            if not slug or not re.search(r"\d", slug) or u in seen:
                 continue
-            # product URLs are deep paths (4+ segments) that aren't categories
-            us = [u for u in sitemap_urls(xml)
-                  if u.rstrip("/").count("/") >= 4 and "/produkt" not in u.lower()]
-            urls.extend(us)
-            if limit and len(urls) >= limit:
-                return urls[:limit]
-    return urls[:limit] if limit else urls
+            seen.add(u)
+            # dimension slugs (450x350x380, 8x60) are products — front-load
+            # them so smoke runs (small limit) hit real pages, not the
+            # DIN-numbered category section at the head of each sitemap
+            if re.search(r"\d+x\d+", slug):
+                urls.append(u)
+            else:
+                rest.append(u)
+        if limit and len(urls) >= limit:
+            break
+    all_urls = urls + rest
+    return all_urls[:limit] if limit else all_urls
 
 
 def handle(u, html):
-    rows = []
-    for p in ldjson_products(html):
-        off = offer_from_ld(p)
-        if off:
-            off["price"] = sane_price(off["price"])
-        if not off or not off["price"]:
-            continue
-        t = re.search(r"<title[^>]*>([^<]+)</title>", html)
-        name = (t.group(1).split("|")[0].strip() if t else u.rsplit("/", 1)[-1])
-        rows.append({
-            "chain": "merkur_si",
-            "country": "si",
-            "currency": off["currency"],
-            "sku": None,
-            "ean": valid_ean(p.get("gtin13") or p.get("gtin") or p.get("ean")),
-            "name": name,
-            "url": u,
-            "price": off["price"],
-            "in_stock": off["in_stock"],
-            "image": first_str(p.get("image")),
-        })
-        break
-    return rows
+    # product pages only — category/listing pages also carry prices in carousels
+    if 'property="og:type" content="product"' not in html \
+            and "og:type\" content=\"product\"" not in html:
+        return []
+    m = re.search(r'itemprop="price"\s+content="([0-9.]+)"', html)
+    if not m:
+        m = re.search(r'"price"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?', html)
+    if not m:
+        return []
+    p = sane_price(float(m.group(1)))
+    if not p:
+        return []
+    img = re.search(r'property="og:image"\s+content="([^"]+)"', html)
+    t = re.search(r"<title[^>]*>([^<]+)</title>", html)
+    name = (t.group(1).split("|")[0].strip() if t else u.rsplit("/", 1)[-1])
+    ean = re.search(r'"gtin\d*"\s*:\s*"?(\d{8,14})"?', html)
+    return [{
+        "chain": "merkur_si",
+        "country": "si",
+        "currency": "EUR",
+        "sku": None,
+        "ean": ean.group(1) if ean else None,
+        "name": name,
+        "url": u,
+        "price": p,
+        "in_stock": None,
+        "image": img.group(1).strip() if img else None,
+    }]
 
 
 def scrape(limit=None):
