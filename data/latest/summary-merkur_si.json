@@ -2,11 +2,11 @@
  "date": "2026-10-06",
  "chains": {
   "merkur_si": {
-   "products": 147971,
+   "products": 20085,
    "price_changes": 0,
    "suspicious_changes": 0,
    "expired": 0,
-   "seconds": 5828.5
+   "seconds": 18003.1
   }
  }
 }
