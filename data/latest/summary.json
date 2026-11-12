@@ -1,13 +1,13 @@
 {
- "date": "2026-11-11",
+ "date": "2026-11-12",
  "total_rows": 147761,
  "chains": {
   "merkur_si": {
-   "products": 147703,
+   "products": 14924,
    "price_changes": 0,
    "suspicious_changes": 0,
-   "expired": 43,
-   "seconds": 2706.1
+   "expired": 0,
+   "seconds": 18004.6
   }
  }
 }
