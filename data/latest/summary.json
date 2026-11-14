@@ -1,10 +1,13 @@
 {
- "date": "2026-11-13",
+ "date": "2026-11-14",
  "total_rows": 147754,
  "chains": {
   "merkur_si": {
-   "error": "collapse guard: 29 rows vs 147754 before",
-   "kept_previous": true
+   "products": 18478,
+   "price_changes": 0,
+   "suspicious_changes": 0,
+   "expired": 0,
+   "seconds": 18005.8
   }
  }
 }
