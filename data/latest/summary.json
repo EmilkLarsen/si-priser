@@ -3,11 +3,11 @@
  "total_rows": 147751,
  "chains": {
   "merkur_si": {
-   "products": 147731,
+   "products": 17611,
    "price_changes": 0,
    "suspicious_changes": 0,
-   "expired": 5,
-   "seconds": 9546.3
+   "expired": 0,
+   "seconds": 18006.1
   }
  }
 }
